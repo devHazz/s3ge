@@ -1,0 +1,5 @@
+package importer
+
+func Attach() {
+	
+}

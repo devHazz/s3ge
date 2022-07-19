@@ -16,9 +16,7 @@ func HandlePSG(index int, file string) (error) {
 	graphic := converter.ReadGraphics(s)[index]
 	
 	offset := converter.FindGraphicOffsets(s)[index]
-	copy(s[offset:], newGraphic)
-
-	copy(s[offset + 0x1BC:offset + 0x1BC + 8], []byte(graphic.Name)) //Change new graphic id to existing id
+	copy(s[offset + int(graphic.HeadSize):offset + int(graphic.Size)], newGraphic[graphic.HeadSize:graphic.Size])
 	err = os.WriteFile("./files/SKATER.P", s, 0666)
 	if err != nil {
 		return err
