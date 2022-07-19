@@ -64,9 +64,6 @@ func ReadGraphics(skater []byte) ([]Graphic) {
 		br, _ := r.Read(strBuffer)
 		graphic.Name = string(strBuffer[:br])
 
-		path := fmt.Sprintf("./files/%s.psg", graphic.Name)
-		fmt.Printf("Path: %s | Header Size: %d | Body Size: %d | Offset: %d\n", path, graphic.HeadSize, graphic.BodySize, graphic.Offset)
-
 		buf := make([]byte, graphic.Size)
 		r.Seek(graphic.Offset, io.SeekStart)
 		rl, err := r.Read(buf)

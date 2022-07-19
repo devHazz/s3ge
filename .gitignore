@@ -1,1 +1,2 @@
-files/SKATER.P
+files/*
+!files/.gitkeep
