@@ -1,2 +1,8 @@
+github.com/infinitytools/go-squish v1.1.0 h1:L67tCBSM0A14zJoysi75RyfKZ77veGmlmpfL5HoPNKM=
+github.com/infinitytools/go-squish v1.1.0/go.mod h1:nGyiz3JnntDuvJjhqJrWaAE2wtPZHp0sxysodeR2uFk=
+github.com/mauserzjeh/dxt v1.0.0 h1:5Qb1aqvdYGAKzQuZQ3lJGKzUje2WswXNvaZkWd0NqG0=
+github.com/mauserzjeh/dxt v1.0.0/go.mod h1:Ulty8+/KXIxoS/sOspJ2z/aPdsXnDH+sCWdZHQSD51k=
+github.com/spate/glimage v0.0.0-20200505055513-fbdcc60a65e5 h1:i6p4jluRhb5P857lqMZDdpt/KuJxS9CnJU1Nqv8ts5k=
+github.com/spate/glimage v0.0.0-20200505055513-fbdcc60a65e5/go.mod h1:F9YvJg9MlSd+PomE+6peEdsa/VdHFv4DYPXTwtfnHh8=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 h1:0A+M6Uqn+Eje4kHMK80dtF3JCXC4ykBgQG4Fe06QRhQ=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

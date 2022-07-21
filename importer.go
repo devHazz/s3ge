@@ -24,7 +24,7 @@ func Select(reader *bufio.Reader) (int, int) {
 	if text == "1" || text == "2" || text == "3" || text == "4" {
 		fmt.Printf("You have selected graphic: %s\n", text)
 		i, _ := strconv.Atoi(text)
-		i -= 1
+		//i -= 1
 		fmt.Println("Please enter the Skate 3 PID: ")
 
 		pid, _ := reader.ReadString('\n')
@@ -66,13 +66,13 @@ Please drag & drop your PSG/DDS Graphic into here`)
 		h := importer.Attach(pid)
 		switch n {
 		case 1:
-			importer.ModifyGraphic(h, clean, 0x70, importer.GraphicOne)
+			importer.ModifyGraphic(h, clean, importer.GraphicOne)
 		case 2:
-			importer.ModifyGraphic(h, clean, 0x70, importer.GraphicTwo)
+			importer.ModifyGraphic(h, clean, importer.GraphicTwo)
 		case 3:
-			importer.ModifyGraphic(h, clean, 0x70, importer.GraphicThree)
+			importer.ModifyGraphic(h, clean, importer.GraphicThree)
 		case 4:
-			importer.ModifyGraphic(h, clean, 0x70, importer.GraphicFour)
+			importer.ModifyGraphic(h, clean, importer.GraphicFour)
 		default:
 			log.Panic("[ERROR] Incorrect graphic option")
 		}
