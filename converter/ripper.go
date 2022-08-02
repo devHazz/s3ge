@@ -43,6 +43,24 @@ func FindGraphicOffsets(skater []byte) ([]int) {
 	return occurences
 }
 
+func ReadGraphicFromPSG(r *bytes.Reader, psgBuffer []byte) (Graphic) {
+	var graphic Graphic
+	r.Seek(0x44, io.SeekCurrent)
+	graphic.HeadSize = ReadBEUint32(r)
+
+	r.Seek(0x24, io.SeekCurrent)
+	graphic.BodySize = ReadBEUint32(r)
+	graphic.Size = graphic.HeadSize + graphic.BodySize
+
+	r.Seek(0x14C, io.SeekCurrent)
+	strBuffer := make([]byte, 8)
+	br, _ := r.Read(strBuffer)
+	graphic.Name = string(strBuffer[:br])
+	graphic.Buffer = psgBuffer
+	
+	return graphic
+}
+
 func ReadGraphics(skater []byte) ([]Graphic) {
 	r := bytes.NewReader(skater)
 	var graphics []Graphic

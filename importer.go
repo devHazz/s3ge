@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"converter"
 	"fmt"
 	"importer"
 	"log"
@@ -62,24 +64,65 @@ Please drag & drop your PSG/DDS Graphic into here`)
 	}
 	switch {
 	case strings.HasSuffix(clean, ".psg"):
+		
 		n, pid := Select(reader)
 		h := importer.Attach(pid)
+		b, _ := os.ReadFile(clean)
+		graphic := converter.ReadGraphicFromPSG(bytes.NewReader(b), b)
 		switch n {
 		case 1:
-			importer.ModifyGraphic(h, clean, importer.GraphicOne)
+			err = importer.ModifyByPSG(graphic, h, b, importer.GraphicOne)
+			if err != nil {
+				log.Panic(err)
+			}
 		case 2:
-			importer.ModifyGraphic(h, clean, importer.GraphicTwo)
+			err = importer.ModifyByPSG(graphic, h, b, importer.GraphicTwo)
+			if err != nil {
+				log.Panic(err)
+			}
 		case 3:
-			importer.ModifyGraphic(h, clean, importer.GraphicThree)
+			err = importer.ModifyByPSG(graphic, h, b, importer.GraphicThree)
+			if err != nil {
+				log.Panic(err)
+			}
 		case 4:
-			importer.ModifyGraphic(h, clean, importer.GraphicFour)
+			err = importer.ModifyByPSG(graphic, h, b, importer.GraphicFour)
+			if err != nil {
+				log.Panic(err)
+			}
 		default:
 			log.Panic("[ERROR] Incorrect graphic option")
 		}
 
 		//importer.HandlePSG(choice, clean)
 	case strings.HasSuffix(clean, ".dds"):
-		//choice := Select(reader)
+		n, pid := Select(reader)
+		h := importer.Attach(pid)
+		buf, _ := os.ReadFile(clean)
+		switch n {
+		case 1:
+			err = importer.ModifyByDDS(buf, h, importer.GraphicOne)
+			if err != nil {
+				log.Panic(err)
+			}
+		case 2:
+			err = importer.ModifyByDDS(buf, h, importer.GraphicTwo)
+			if err != nil {
+				log.Panic(err)
+			}
+		case 3:
+			err = importer.ModifyByDDS(buf, h, importer.GraphicThree)
+			if err != nil {
+				log.Panic(err)
+			}
+		case 4:
+			err = importer.ModifyByDDS(buf, h, importer.GraphicFour)
+			if err != nil {
+				log.Panic(err)
+			}
+		default:
+			log.Panic("[ERROR] Incorrect graphic option") 
+		}
 	default:
 		log.Fatal("[FATAL] File is not of DDS/PSG type")
 	}

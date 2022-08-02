@@ -3,63 +3,30 @@ package importer
 import (
 	"bytes"
 	"converter"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"unsafe"
-	"golang.org/x/sys/windows"
 	"os/exec"
-	"strconv"
+
+	//"strconv"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
+
 const (
-	GraphicOne = 0x3427B6EF1
-	GraphicTwo = 0x3427CD119
-	GraphicThree = 0x3427D822D
-	GraphicFour = 0x4427C21C0
+	GraphicOne   = 0x3427B6EF1
+	GraphicTwo   = 0x3427C2005
+	GraphicThree = 0x3427CD119
+	GraphicFour  = 0x3427D822D
+	BodySize     = 0xAAC0
 )
 
-func ModifyGraphic(handle windows.Handle, file string, address uintptr) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		log.Panic(err)
-	}
-	
-	r := bytes.NewReader(data)
-	var g converter.Graphic
-	g.Offset = int64(address)
-
-	r.Seek(0x44, io.SeekCurrent)
-	g.HeadSize = converter.ReadBEUint32(r)
-
-	r.Seek(0x24, io.SeekCurrent)
-	g.BodySize = converter.ReadBEUint32(r)
-	g.Size = g.HeadSize + g.BodySize
-
-	// buffer := ReadProcMemory(handle, int(g.Size), address)
-	// fmt.Println(string(buffer))
-	r.Seek(0x15C, io.SeekStart)
-	//Image Format Byte
-	imgFormat, _ := r.ReadByte()
-	r.Seek(0x164, io.SeekStart)
-	width := converter.ReadBEUint16(r)
-	height := converter.ReadBEUint16(r)
-	text := data[0x238:]
-
-	r.Seek(0x1BC, io.SeekStart)
-	strBuffer := make([]byte, 8)
-	br, _ := r.Read(strBuffer)
-	g.Name = string(strBuffer[:br])
-
-	fmt.Printf("Width: %d | Height: %d\n", width, height)
-	fmt.Printf("Head Size: %d | Body Size: %d\n", g.HeadSize, g.BodySize)
-
-	err = os.WriteFile(fmt.Sprintf("./files/%s.dat", g.Name), text, 0666)
-	if err != nil {
-		log.Panic(err)
-	}
+func getCompressionType(format byte) string {
 	var strFormat string
-	switch imgFormat {
+	switch format {
 	case 0xA6:
 		strFormat = "DXT1"
 	case 0x86:
@@ -70,60 +37,111 @@ func ModifyGraphic(handle windows.Handle, file string, address uintptr) {
 		strFormat = "DXT5"
 	case 0xA5:
 		strFormat = "87"
+	default:
+		log.Panic("Compression type not valid")
 	}
+	return strFormat
 
-
-	err = exec.Command(".\\bin\\RawtexCmd.exe", fmt.Sprintf("./files/%s.dat", g.Name), strFormat, "0", strconv.Itoa(int(width)), strconv.Itoa(int(height))).Run()
-		if err != nil {
-			log.Panic(err)
-		}
-		defer func(name string) {
-			err := os.Remove(name)
-			if err != nil {
-				log.Fatal()
-			}
-		}("./files/" + g.Name + ".dat")
-
-		dds, _ := os.ReadFile("./files/"+g.Name+".dds")
-	WriteProcMemory(handle, dds[0x80:], 0xAAD0, address + 0x237)
-	//windows.CloseHandle(handle)
 }
 
-func Attach(pid int) (windows.Handle) {
-	handle, err := windows.OpenProcess(0x1F0FFF, false, uint32(pid))
+func ModifyByPSG(g converter.Graphic, handle windows.Handle, oldData []byte, memAddress uintptr) error {
+	err := os.WriteFile(fmt.Sprintf("./files/%s.dat", g.Name), oldData[0x248:], 0666)
+	if err != nil {
+		return err
+	}
+	var strFormat string
+	r := bytes.NewReader(oldData)
+	r.Seek(0x15C, io.SeekStart)
+	imgFormat, _ := r.ReadByte()
+	strFormat = getCompressionType(imgFormat)
+	err = exec.Command(".\\bin\\RawtexCmd.exe", fmt.Sprintf("./files/%s.dat", g.Name), strFormat, "0", "256", "128").Run()
+	if err != nil {
+		return err
+	}
+
+	os.Remove("./files/" + g.Name + ".dat")
+
+	ddsData, err := os.ReadFile("./files/" + g.Name + ".dds")
+	if err != nil {
+		return err
+	}
+	g.Buffer = ddsData
+	if (len(g.Buffer) - 0x80) == 0x8000 {
+		fmt.Println("[INFO] Unusual converted file size, continuing...")
+		g.Buffer = append(g.Buffer, oldData[0x248 + 0x8000:]...)
+	}
+	//Data to make up for texture bleed
+	err = ModifyByDDS(g.Buffer, handle, memAddress)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ModifyByDDS(buffer []byte, handle windows.Handle, memAddress uintptr) error {
+	file, err := DDSParse(buffer)
+	if err != nil {
+		return err
+	}
+	if file.Height == 128 && file.Width == 256 {
+		if (file.Size - 0x80) == 0xAAC0 || (file.Size - 0x80) == 0x8000 { //Checking for files that have converted weirdly
+			//Correct DDS File Length
+			data := file.Buffer[0x80:]
+			err = WriteProcMemory(handle, data, BodySize, memAddress+0x247)
+			if err != nil {
+				return err
+			}
+			return nil
+		} else if (file.Size - 0x80) == 0xAAD0 {
+			data := file.Buffer[0x90:]
+			err = WriteProcMemory(handle, data, BodySize, memAddress+0x247)
+			if err != nil {
+				return err
+			}
+			return nil
+		} else {
+			return errors.New("graphic body size has incorrect read length")
+		}
+	} else {
+		return errors.New("the current dimensions do not meet 256x128")
+	}
+}
+
+func Attach(pid int) windows.Handle {
+	handle, err := windows.OpenProcess(0x1F0FFF, true, uint32(pid))
 	if err != nil {
 		log.Panic(err)
 	}
 	return handle
 }
 
-func ReadProcMemory(handle windows.Handle, nSize int, address uintptr) ([]byte) {
-	read := windows.MustLoadDLL("kernel32.dll").MustFindProc("ReadProcessMemory")
+func ReadProcMemory(handle windows.Handle, nSize int, address uintptr) ([]byte, error) {
 	var data = make([]byte, nSize)
 	var length uint32
-
-	  ret, _, e := read.Call(uintptr(handle), address,
-    	uintptr(unsafe.Pointer(&data[0])),
-    	uintptr(nSize), uintptr(unsafe.Pointer(&length)))
-		if ret == 0 {
-			log.Panic(e)
-		}
-	return data
+	err := windows.ReadProcessMemory(handle, address, (*byte)(unsafe.Pointer(&data[0])), uintptr(nSize), (*uintptr)(unsafe.Pointer(&length)))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, errors.New("no buffer data found")
+	}
+	return data, nil
 }
 
-
-func WriteProcMemory(handle windows.Handle, data []byte,  nSize int, address uintptr) {
+func WriteProcMemory(handle windows.Handle, data []byte, nSize int, address uintptr) error {
 	var length uint32
-
+	//var oldProtect uint32
+	// err := windows.VirtualProtectEx(handle, address, uintptr(nSize), windows.PAGE_EXECUTE_READWRITE, &oldProtect)
+	// if err != nil {
+	// 	return err
+	// }
 	err := windows.WriteProcessMemory(handle, address, (*byte)(unsafe.Pointer(&data[0])), uintptr(nSize), (*uintptr)(unsafe.Pointer(&length)))
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
-	//   ret, _, e := write.Call(uintptr(handle), address,
-    // 	uintptr(unsafe.Pointer(&data[0])),
-    // 	uintptr(nSize), uintptr(unsafe.Pointer(&length)))
-	// 	if ret == 0 {
-	// 		log.Panic(e)
-	// 	}
-	windows.CloseHandle(handle)
+	// err = windows.VirtualProtectEx(handle, address, uintptr(nSize), oldProtect, nil)
+	// if err != nil {
+	// 	return err
+	// }
+	return nil
 }
