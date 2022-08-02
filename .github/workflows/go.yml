@@ -23,6 +23,3 @@ jobs:
       
     - name: Build Importer
       run: go build -v ./importer.go
-
-    - name: Test
-      run: go test -v ./...
