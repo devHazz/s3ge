@@ -1,0 +1,4 @@
+files/*
+!files/.gitkeep
+bin/release/
+internal/gui
